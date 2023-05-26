@@ -111,8 +111,6 @@ int main(int argc, char **argv)
             if (server.isBoardConnected())
             {
                 std::cout << "(INFO) Starting server." << std::endl;
-
-
                 server.run();
                 std::cout << "(INFO) Server finished." << std::endl;
             }

@@ -1,7 +1,7 @@
 #ifndef MEMORY_TABLE_H
 #define MEMORY_TABLE_H
 
-#include <cstdint>
+#include "definitions.hpp"
 
 extern uint8_t registerSize(uint8_t address);
 

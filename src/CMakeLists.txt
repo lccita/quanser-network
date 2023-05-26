@@ -3,22 +3,13 @@ cmake_minimum_required(VERSION 3.24)
 project(quanserNetwork C CXX)
 include(FetchContent)
 
-#################
-# What to build #
-#################
-set (BUILD_SERVER ON)           # it requires the Quanser HIL SDK (or QuaRC) to be installed
-set (BUILD_CLIENT_EXAMPLES ON)
-
 ####################
 # Quanser location #
 ####################
 if (MSVC)
+    # Windows systems
+    # todo make cmake test if quarc or hil sdk is installed
     set(QUANSER_PATH "C:/Program Files/Quanser/HIL SDK")
-else ()
-    set(QUANSER_PATH /opt/quanser/hil_sdk)
-endif ()
-set(QUANSER_INCLUDE_PATH ${QUANSER_PATH}/include)
-if (MSVC)
 	if ("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
 		message(STATUS "(INFO) Detected Windows 32 bits")
 		set(QUANSER_LIB_PATH ${QUANSER_PATH}/lib/windows)
@@ -26,8 +17,19 @@ if (MSVC)
 		message(STATUS "(INFO) Detected Windows 64 bits")
 		set(QUANSER_LIB_PATH ${QUANSER_PATH}/lib/win64)
 	endif ()
+	set(QUANSER_INCLUDE_PATH ${QUANSER_PATH}/include)
 else ()
+    # Linux systems (only HIL SDK is supported)
+    set(QUANSER_PATH /opt/quanser/hil_sdk)
     set(QUANSER_LIB_PATH ${QUANSER_PATH}/lib)
+    set(QUANSER_INCLUDE_PATH ${QUANSER_PATH}/include)
+endif ()
+if (EXISTS ${QUANSER_PATH})
+    set (BUILD_SERVER ON)
+    message (STATUS "The server application will be built")
+else ()
+    set (BUILD_SERVER OFF)
+    message (STATUS "The server application will NOT be built")
 endif ()
 
 ###################
@@ -42,50 +44,70 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(asio)
 set(ASIO_INCLUDE_PATH ${asio_SOURCE_DIR}/asio/include)
 
-###########################
-# Build the utils library #
-###########################
-add_library(libUtils STATIC utils/definitions.hpp utils/definitions.cpp utils/protocol.c utils/protocol.h utils/receiver.c utils/receiver.h utils/time_helper.cpp utils/time_helper.h utils/memory_table.cpp utils/memory_table.hpp)
-target_include_directories(libUtils PRIVATE ./utils)
+set(SRC_UTILS
+    utils/definitions.hpp
+    utils/definitions.cpp
+    utils/protocol.c
+    utils/protocol.h
+    utils/receiver.c
+    utils/receiver.h
+    utils/time_helper.cpp
+    utils/time_helper.h
+    utils/memory_table.cpp
+    utils/memory_table.hpp
+)
 
 ################################
 # Build the server application #
 ################################
 if (${BUILD_SERVER} MATCHES ON)
     message (STATUS "Configuring to build the server application")
-    add_executable(server server/main.cpp server/server.cpp)
+    add_executable(server
+        server/main.cpp
+        server/server.cpp
+        server/server.hpp
+        ${SRC_UTILS}
+    )
     if (MSVC)
         set(QUANSER_REQUIRED_LIBS hil quanser_runtime quanser_common)
     else ()
         set(QUANSER_REQUIRED_LIBS hil quanser_runtime quanser_common rt pthread dl m c)
     endif ()
-    target_link_libraries(server libUtils ${QUANSER_REQUIRED_LIBS})
+    target_link_libraries(server ${QUANSER_REQUIRED_LIBS})
     target_link_directories(server PRIVATE ${QUANSER_LIB_PATH})
     target_include_directories(server PRIVATE "." ${ASIO_INCLUDE_PATH} ${QUANSER_INCLUDE_PATH})
 endif ()
 
-#################################
-# Build the RemoteBoard library #
-#################################
-add_library(libClient STATIC client/remote_board.cpp utils/memory_table.cpp)
-target_link_libraries(libClient libUtils)
-target_include_directories(libClient PRIVATE "." ${ASIO_INCLUDE_PATH})
+#####################################
+# Build the analog_loopback example #
+#####################################
+add_executable(exampleAnalogLoopback
+    examples/analog_loopback.cpp
+    client/remote_board.cpp
+    client/remote_board.hpp
+    ${SRC_UTILS}
+)
+target_include_directories(exampleAnalogLoopback PRIVATE "." ${ASIO_INCLUDE_PATH})
 
-#################################
-# Build the RemoteBoard example #
-#################################
-if (${BUILD_CLIENT_EXAMPLES} MATCHES ON)
-    add_executable(analogLoopbackExample examples/analog_loopback.cpp)
-    target_link_libraries(analogLoopbackExample libClient)
-    target_include_directories(analogLoopbackExample PRIVATE "." ${ASIO_INCLUDE_PATH})
-endif ()
+#####################################
+# Build the autoread example #
+#####################################
+add_executable(exampleAutoRead
+    examples/auto_read.cpp
+    client/remote_board.cpp
+    client/remote_board.hpp
+    ${SRC_UTILS}
+)
+target_include_directories(exampleAutoRead PRIVATE "." ${ASIO_INCLUDE_PATH})
 
 ###############################################
 # Build the memory table verifier application #
 ###############################################
-add_executable(scriptTestMemoryTable scripts/test_memory_table.cpp)
+add_executable(scriptTestMemoryTable
+    scripts/test_memory_table.cpp
+    ${SRC_UTILS}
+)
 target_include_directories(scriptTestMemoryTable PRIVATE ".")
-target_link_libraries(scriptTestMemoryTable libUtils)
 
 # todo copy the Quanser dlls automatically
 # https://stackoverflow.com/questions/10671916/how-to-copy-dll-files-into-the-same-folder-as-the-executable-using-cmake

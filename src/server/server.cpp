@@ -229,10 +229,8 @@ bool Server::isRealBoard()
 
 void Server::run()
 {
-    if (socket->is_open())
-    {
+    if (hasClientConnected)
         communicationAsyncReceive();
-    }
     ioContext.run();
     ioContext.restart();
 }
@@ -953,6 +951,8 @@ void Server::callbackFinishedReceiving(const std::error_code& ec, size_t bytesTr
 
     if ((ec == asio::error::eof) || (ec == asio::error::connection_reset))
     {
+        socket->cancel();
+        acceptor->cancel();
         socket->close(); 
         acceptor->close();
         delete socket;
@@ -993,7 +993,8 @@ void Server::callbackFinishedReceiving(const std::error_code& ec, size_t bytesTr
     }
 
     // trigger another async read before exiting to make sure that asio_context.run() is still running
-    communicationAsyncReceive();
+    if (hasClientConnected)
+        communicationAsyncReceive();
 }
 
 void Server::callbackFinishedSending(const std::error_code& ec, size_t bytesTransferred)
@@ -1009,12 +1010,14 @@ void Server::callbackFinishedAccepting(const std::error_code& ec)
 {
     (void) ec;
 
+    hasClientConnected = true;
     communicationAsyncReceive();
     std::cout << "(INFO) A client has connected" << std::endl;
 }
 
 void Server::communicationStart()
 {
+    hasClientConnected = false;
     socket = new asio::ip::tcp::socket(ioContext);
     acceptor = new asio::ip::tcp::acceptor(ioContext, asio::ip::tcp::endpoint(asio::ip::tcp::v4(), port));
 

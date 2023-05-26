@@ -23,6 +23,11 @@ class Server {
 public:
     using Callback = std::function<void(void)>;
 
+    /**
+     * The server class main constructor.
+     * @param setPort is the port number that the server will be listening for client connections.
+     * @param boardName is a string with the board name. @see supportedBoards
+     */
     Server(unsigned int setPort, std::string& boardName);
 
     /**
@@ -44,10 +49,10 @@ private:
     bool waitingRx = false; ///< An auxiliary variable to the asynchronous communication.
     bool waitingTx = false; ///< An auxiliary variable to the asynchronous communication.
     bool running = true;    ///< This variable will keep the async communication running.
+    bool hasClientConnected = false;
     unsigned int timeoutMs = 3;
     unsigned int maxRetries = 2;
     t_card card;
-    //boost::thread* threadBoardRead;
     Callback callbackUserFinishedReceivingData;
     asio::io_context ioContext;
     asio::ip::tcp::socket *socket;
