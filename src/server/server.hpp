@@ -17,6 +17,11 @@
 #include "utils/protocol.h"
 #include "utils/receiver.h"
 
+#ifdef WIN32
+extern "C" NTSYSAPI NTSTATUS NTAPI NtSetTimerResolution(ULONG DesiredResolution, BOOLEAN SetResolution, PULONG CurrentResolution);
+extern "C" NTSYSAPI NTSTATUS NTAPI NtQueryTimerResolution(PULONG MinimumResolution, PULONG MaximumResolution, PULONG CurrentResolution);
+#endif
+
 constexpr unsigned int serverVersion[] = {1, 0};
 
 class Server {

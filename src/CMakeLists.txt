@@ -69,7 +69,7 @@ if (${BUILD_SERVER} MATCHES ON)
         ${SRC_UTILS}
     )
     if (MSVC)
-        set(QUANSER_REQUIRED_LIBS hil quanser_runtime quanser_common)
+        set(QUANSER_REQUIRED_LIBS hil quanser_runtime quanser_common ntdll)
     else ()
         set(QUANSER_REQUIRED_LIBS hil quanser_runtime quanser_common rt pthread dl m c)
     endif ()

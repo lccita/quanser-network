@@ -190,6 +190,17 @@ Server::Server(unsigned int setPort, std::string& boardName) : port(setPort)
             {
                 table.Reg.Setup.BoardModel.value = boardQ8USB;
             }
+
+            #ifdef WIN32
+            // Fix Windows problem with low resolution timers, see
+            // https://randomascii.wordpress.com/2020/10/04/windows-timer-resolution-the-great-rule-change
+            // http://undocumented.ntinternals.net/index.html?page=UserMode%2FUndocumented%20Functions%2FTime%2FNtSetTimerResolution.html
+            // http://undocumented.ntinternals.net/index.html?page=UserMode%2FUndocumented%20Functions%2FTime%2FNtQueryTimerResolution.html
+            // https://learn.microsoft.com/en-us/windows/win32/api/timeapi/nf-timeapi-timebeginperiod
+            ULONG MinRes, MaxRes, CurrentRes;
+            NtQueryTimerResolution(&MinRes, &MaxRes, &CurrentRes);
+            NtSetTimerResolution(MaxRes, 1, &CurrentRes);
+            #endif
         }
     }
 
