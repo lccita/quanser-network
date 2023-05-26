@@ -58,6 +58,7 @@ private:
     asio::ip::tcp::socket *socket;
     asio::ip::tcp::acceptor *acceptor;
     uint16_t port;
+    asio::high_resolution_timer *autoReadTimer;
 
     void loadDefaultValues();
 
@@ -83,6 +84,10 @@ private:
 
     void boardRead();
 
+    void enableAutoRead();
+
+    void disableAutoRead();
+
     void processWriteInstruction(uint16_t addr, int16_t size, const uint8_t* values);
 
     void handleWriteInstruction();
@@ -101,8 +106,12 @@ private:
 
     void callbackFinishedSending(const std::error_code& ec, size_t bytesTransferred);
 
+    void callbackAutoRead(const std::error_code& ec);
+
     void communicationStart();
+
     void communicationAsyncSend(uint8_t* data, uint16_t size);
+
     void communicationAsyncReceive();
 };
 

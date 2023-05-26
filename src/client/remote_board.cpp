@@ -580,13 +580,8 @@ void RemoteBoard::encoderSetQuadrature(unsigned int encoderNumber, encoderQuadra
 void RemoteBoard::enableAutoRead(double periodSecs)
 {
     periodSecs = std::max(std::abs(periodSecs), 0.001);
-
-    table.Reg.Setup.AutoRead.Period.value.asBit32 = static_cast<uint32_t>(periodSecs / 0.001);
-    table.Reg.Setup.AutoRead.FirstReg.value = 0;
-    table.Reg.Setup.AutoRead.Length.value = 50;
+    table.Reg.Setup.AutoRead.Period.value.asBit32 = static_cast<uint32_t>(1000000 * periodSecs);
     addToSyncList(MemoryTableDescription::Reg::Setup::AutoRead::Period::address);
-    addToSyncList(MemoryTableDescription::Reg::Setup::AutoRead::FirstReg::address);
-    addToSyncList(MemoryTableDescription::Reg::Setup::AutoRead::Length::address);
 }
 
 void RemoteBoard::enableAutoRead(double periodSecs, Callback function)

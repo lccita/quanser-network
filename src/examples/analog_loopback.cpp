@@ -13,7 +13,7 @@ int main()
 
         board.readMeasurements();
         double adcValue = board.analogRead(CH1);
-        std::cout << "ADC VALUE = " << adcValue << " V\n";
+        std::cout << "Voltage = " << adcValue << " V" << std::endl;
 
         board.close();
     }

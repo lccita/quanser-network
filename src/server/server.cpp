@@ -196,6 +196,7 @@ Server::Server(unsigned int setPort, std::string& boardName) : port(setPort)
     if (table.Reg.Setup.BoardModel.value != boardNotFound)
     {
         communicationStart();
+        autoReadTimer = new asio::high_resolution_timer(ioContext);
     }
     else
     {
@@ -698,6 +699,21 @@ void Server::boardRead()
 
 }
 
+void Server::enableAutoRead()
+{
+    const uint32_t periodUs = table.Reg.Setup.AutoRead.Period.value.asBit32;
+    if (periodUs > 0)
+    {
+        autoReadTimer->expires_from_now(asio::chrono::microseconds(periodUs));
+        autoReadTimer->async_wait(std::bind(&Server::callbackAutoRead, this, std::placeholders::_1));
+    }
+}
+
+void Server::disableAutoRead()
+{
+    autoReadTimer->cancel();
+}
+
 void Server::processWriteInstruction(uint16_t addr, int16_t size, const uint8_t* values)
 {
     const uint16_t firstAddress = addr;
@@ -825,6 +841,17 @@ void Server::processWriteInstruction(uint16_t addr, int16_t size, const uint8_t*
                 addr = addr + sizeInBytes;
                 break;
 
+            case MemoryTableDescription::Reg::Setup::AutoRead::Period::address:
+                sizeInBytes = sizeof(MemoryTableDescription::Reg::Setup::AutoRead::Period::value);
+                memcpy(table.Reg.Setup.AutoRead.Period.value.asBit8, &values[addr - firstAddress], sizeInBytes);
+                if (table.Reg.Setup.AutoRead.Period.value.asBit32 > 0)
+                    enableAutoRead();
+                else
+                    disableAutoRead();
+                length = length - sizeInBytes;
+                addr = addr + sizeInBytes;
+                break;
+
             default:
                 // If arrived here, then the loop will repeat and it is required
                 // to update the addr and length
@@ -902,8 +929,11 @@ void Server::handleReadInstruction()
 void Server::makeAutoReadMsg()
 {
     uint8_t i;
-    const uint8_t first_reg = table.Reg.Setup.AutoRead.FirstReg.value;
-    const uint8_t length = table.Reg.Setup.AutoRead.Length.value;
+    const uint8_t first_reg = 0;
+    const uint8_t length = 68;
+
+    // update the measurements
+    boardRead();
 
     commMsgCreateEmptyMsg(&autoReadStatusPacket, commMsgTypeAnsRead);
     commMsgAppendParameter(&autoReadStatusPacket, 0);          // insert error
@@ -1013,6 +1043,35 @@ void Server::callbackFinishedAccepting(const std::error_code& ec)
     hasClientConnected = true;
     communicationAsyncReceive();
     std::cout << "(INFO) A client has connected" << std::endl;
+}
+
+void Server::callbackAutoRead(const std::error_code& ec)
+{
+    const uint32_t periodUs = table.Reg.Setup.AutoRead.Period.value.asBit32;
+    uint8_t *buffer;
+    uint16_t size;
+
+    if (ec == asio::error::operation_aborted)
+    {
+        // the waiting was cancelled
+    }
+    else
+    {
+        if (periodUs > 0)
+        {
+            // schedule the next reading time
+            autoReadTimer->expires_from_now(asio::chrono::microseconds(periodUs));
+
+            // build the autoread message and it
+            makeAutoReadMsg();
+            buffer = autoReadStatusPacket.buffer;
+            size = commMsgGetTotalPacketSize(&autoReadStatusPacket);
+            communicationAsyncSend(buffer, size);
+
+            // now we put the timer to run again
+            autoReadTimer->async_wait(std::bind(&Server::callbackAutoRead, this, std::placeholders::_1));
+        }
+    }
 }
 
 void Server::communicationStart()
