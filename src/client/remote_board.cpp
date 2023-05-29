@@ -102,6 +102,22 @@ void RemoteBoard::sync()
                 size = 16;
                 break;
 
+            case MemoryTableDescription::Reg::Setup::Pwm::Frequency::Ch0::address:
+                size = 32;
+                break;
+
+            case MemoryTableDescription::Reg::Setup::Pwm::Config::Ch0::address:
+                size = 8;
+                break;
+
+            case MemoryTableDescription::Reg::Setup::Pwm::DeadTime::FallingEdge::address:
+                size = 32;
+                break;
+
+            case MemoryTableDescription::Reg::Setup::Dac::Range::Max::Ch0::address:
+                size = 16;
+                break;
+
             default:
                 size = registerSize(address);
                 break;
@@ -322,6 +338,114 @@ void RemoteBoard::analogWrite(channel_t channel, double value)
     addToSyncList(MemoryTableDescription::Reg::Action::Dac::Ch0::address);
 }
 
+void RemoteBoard::configAdc(channel_t channel, adcMode_t mode, double minRange, double maxRange)
+{
+    switch (channel) {
+        case Ch0:
+            table.Reg.Setup.Adc.Mode.value.bit.Ch0 = mode;
+            table.Reg.Setup.Adc.Range.Min.Ch0.value.asInteger = static_cast<int8_t>(minRange);
+            table.Reg.Setup.Adc.Range.Max.Ch0.value.asInteger = static_cast<int8_t>(maxRange);
+            break;
+
+        case Ch1:
+            table.Reg.Setup.Adc.Mode.value.bit.Ch1 = mode;
+            table.Reg.Setup.Adc.Range.Min.Ch1.value.asInteger = static_cast<int8_t>(minRange);
+            table.Reg.Setup.Adc.Range.Max.Ch1.value.asInteger = static_cast<int8_t>(maxRange);
+            break;
+
+        case Ch2:
+            table.Reg.Setup.Adc.Mode.value.bit.Ch2 = mode;
+            table.Reg.Setup.Adc.Range.Min.Ch2.value.asInteger = static_cast<int8_t>(minRange);
+            table.Reg.Setup.Adc.Range.Max.Ch2.value.asInteger = static_cast<int8_t>(maxRange);
+            break;
+
+        case Ch3:
+            table.Reg.Setup.Adc.Mode.value.bit.Ch3 = mode;
+            table.Reg.Setup.Adc.Range.Min.Ch3.value.asInteger = static_cast<int8_t>(minRange);
+            table.Reg.Setup.Adc.Range.Max.Ch3.value.asInteger = static_cast<int8_t>(maxRange);
+            break;
+
+        case Ch4:
+            table.Reg.Setup.Adc.Mode.value.bit.Ch4 = mode;
+            table.Reg.Setup.Adc.Range.Min.Ch4.value.asInteger = static_cast<int8_t>(minRange);
+            table.Reg.Setup.Adc.Range.Max.Ch4.value.asInteger = static_cast<int8_t>(maxRange);
+            break;
+
+        case Ch5:
+            table.Reg.Setup.Adc.Mode.value.bit.Ch5 = mode;
+            table.Reg.Setup.Adc.Range.Min.Ch5.value.asInteger = static_cast<int8_t>(minRange);
+            table.Reg.Setup.Adc.Range.Max.Ch5.value.asInteger = static_cast<int8_t>(maxRange);
+            break;
+
+        case Ch6:
+            table.Reg.Setup.Adc.Mode.value.bit.Ch6 = mode;
+            table.Reg.Setup.Adc.Range.Min.Ch6.value.asInteger = static_cast<int8_t>(minRange);
+            table.Reg.Setup.Adc.Range.Max.Ch6.value.asInteger = static_cast<int8_t>(maxRange);
+            break;
+
+        case Ch7:
+            table.Reg.Setup.Adc.Mode.value.bit.Ch7 = mode;
+            table.Reg.Setup.Adc.Range.Min.Ch7.value.asInteger = static_cast<int8_t>(minRange);
+            table.Reg.Setup.Adc.Range.Max.Ch7.value.asInteger = static_cast<int8_t>(maxRange);
+            break;
+
+        default:
+            break;
+    }
+
+    addToSyncList(MemoryTableDescription::Reg::Setup::Adc::Range::Max::Ch0::address);
+}
+
+void RemoteBoard::configDac(channel_t channel, double minRange, double maxRange)
+{
+    switch (channel) {
+        case Ch0:
+            table.Reg.Setup.Dac.Range.Min.Ch0.value.asInteger = static_cast<int8_t>(minRange);
+            table.Reg.Setup.Dac.Range.Max.Ch0.value.asInteger = static_cast<int8_t>(maxRange);
+            break;
+
+        case Ch1:
+            table.Reg.Setup.Dac.Range.Min.Ch1.value.asInteger = static_cast<int8_t>(minRange);
+            table.Reg.Setup.Dac.Range.Max.Ch1.value.asInteger = static_cast<int8_t>(maxRange);
+            break;
+
+        case Ch2:
+            table.Reg.Setup.Dac.Range.Min.Ch2.value.asInteger = static_cast<int8_t>(minRange);
+            table.Reg.Setup.Dac.Range.Max.Ch2.value.asInteger = static_cast<int8_t>(maxRange);
+            break;
+
+        case Ch3:
+            table.Reg.Setup.Dac.Range.Min.Ch3.value.asInteger = static_cast<int8_t>(minRange);
+            table.Reg.Setup.Dac.Range.Max.Ch3.value.asInteger = static_cast<int8_t>(maxRange);
+            break;
+
+        case Ch4:
+            table.Reg.Setup.Dac.Range.Min.Ch4.value.asInteger = static_cast<int8_t>(minRange);
+            table.Reg.Setup.Dac.Range.Max.Ch4.value.asInteger = static_cast<int8_t>(maxRange);
+            break;
+
+        case Ch5:
+            table.Reg.Setup.Dac.Range.Min.Ch5.value.asInteger = static_cast<int8_t>(minRange);
+            table.Reg.Setup.Dac.Range.Max.Ch5.value.asInteger = static_cast<int8_t>(maxRange);
+            break;
+
+        case Ch6:
+            table.Reg.Setup.Dac.Range.Min.Ch6.value.asInteger = static_cast<int8_t>(minRange);
+            table.Reg.Setup.Dac.Range.Max.Ch6.value.asInteger = static_cast<int8_t>(maxRange);
+            break;
+
+        case Ch7:
+            table.Reg.Setup.Dac.Range.Min.Ch7.value.asInteger = static_cast<int8_t>(minRange);
+            table.Reg.Setup.Dac.Range.Max.Ch7.value.asInteger = static_cast<int8_t>(maxRange);
+            break;
+
+        default:
+            break;
+    }
+
+    addToSyncList(MemoryTableDescription::Reg::Setup::Dac::Range::Max::Ch0::address);
+}
+
 void RemoteBoard::pwmSetDuty(channel_t channel, double duty)
 {
     duty = std::max(duty, 0.0);
@@ -470,6 +594,114 @@ double RemoteBoard::pwmGetFrequency(channel_t channel) const
     }
 
     return static_cast<double>(value);
+}
+
+void RemoteBoard::configPwm(channel_t channel, pwmAlign_t align, pwmConfig_t config, pwmMode_t mode, pwmPolarity_t polarity)
+{
+    switch (channel) {
+        case Ch0:
+            table.Reg.Setup.Pwm.Config.Ch0.bit.mode = mode;
+            table.Reg.Setup.Pwm.Config.Ch0.bit.config = config;            table.Reg.Setup.Pwm.Config.Ch0.bit.alignment = align;
+            table.Reg.Setup.Pwm.Config.Ch0.bit.polarity = polarity;
+            break;
+
+        case Ch1:
+            table.Reg.Setup.Pwm.Config.Ch1.bit.mode = mode;
+            table.Reg.Setup.Pwm.Config.Ch1.bit.config = config;            table.Reg.Setup.Pwm.Config.Ch1.bit.alignment = align;
+            table.Reg.Setup.Pwm.Config.Ch1.bit.polarity = polarity;
+            break;
+
+        case Ch2:
+            table.Reg.Setup.Pwm.Config.Ch2.bit.mode = mode;
+            table.Reg.Setup.Pwm.Config.Ch2.bit.config = config;            table.Reg.Setup.Pwm.Config.Ch2.bit.alignment = align;
+            table.Reg.Setup.Pwm.Config.Ch2.bit.polarity = polarity;
+            break;
+
+        case Ch3:
+            table.Reg.Setup.Pwm.Config.Ch3.bit.mode = mode;
+            table.Reg.Setup.Pwm.Config.Ch3.bit.config = config;            table.Reg.Setup.Pwm.Config.Ch3.bit.alignment = align;
+            table.Reg.Setup.Pwm.Config.Ch3.bit.polarity = polarity;
+            break;
+
+        case Ch4:
+            table.Reg.Setup.Pwm.Config.Ch4.bit.mode = mode;
+            table.Reg.Setup.Pwm.Config.Ch4.bit.config = config;            table.Reg.Setup.Pwm.Config.Ch4.bit.alignment = align;
+            table.Reg.Setup.Pwm.Config.Ch4.bit.polarity = polarity;
+            break;
+
+        case Ch5:
+            table.Reg.Setup.Pwm.Config.Ch5.bit.mode = mode;
+            table.Reg.Setup.Pwm.Config.Ch5.bit.config = config;            table.Reg.Setup.Pwm.Config.Ch5.bit.alignment = align;
+            table.Reg.Setup.Pwm.Config.Ch5.bit.polarity = polarity;
+            break;
+
+        case Ch6:
+            table.Reg.Setup.Pwm.Config.Ch6.bit.mode = mode;
+            table.Reg.Setup.Pwm.Config.Ch6.bit.config = config;            table.Reg.Setup.Pwm.Config.Ch6.bit.alignment = align;
+            table.Reg.Setup.Pwm.Config.Ch6.bit.polarity = polarity;
+            break;
+
+        case Ch7:
+            table.Reg.Setup.Pwm.Config.Ch7.bit.mode = mode;
+            table.Reg.Setup.Pwm.Config.Ch7.bit.config = config;            table.Reg.Setup.Pwm.Config.Ch7.bit.alignment = align;
+            table.Reg.Setup.Pwm.Config.Ch7.bit.polarity = polarity;
+            break;
+
+        default:
+            break;
+    }
+
+    addToSyncList(MemoryTableDescription::Reg::Setup::Pwm::Config::Ch0::address);
+}
+
+void RemoteBoard::setPwmDeadTime(channel_t channel, double risingEdgeTimeNs, double fallingEdgeTimeNs)
+{
+    switch (channel) {
+        case Ch0:
+            table.Reg.Setup.Pwm.DeadTime.RisingEdge.Ch0 = static_cast<uint16_t>(risingEdgeTimeNs);
+            table.Reg.Setup.Pwm.DeadTime.FallingEdge.Ch0 = static_cast<uint16_t>(fallingEdgeTimeNs);
+            break;
+
+        case Ch1:
+            table.Reg.Setup.Pwm.DeadTime.RisingEdge.Ch1 = static_cast<uint16_t>(risingEdgeTimeNs);
+            table.Reg.Setup.Pwm.DeadTime.FallingEdge.Ch1 = static_cast<uint16_t>(fallingEdgeTimeNs);
+            break;
+
+        case Ch2:
+            table.Reg.Setup.Pwm.DeadTime.RisingEdge.Ch2 = static_cast<uint16_t>(risingEdgeTimeNs);
+            table.Reg.Setup.Pwm.DeadTime.FallingEdge.Ch2 = static_cast<uint16_t>(fallingEdgeTimeNs);
+            break;
+
+        case Ch3:
+            table.Reg.Setup.Pwm.DeadTime.RisingEdge.Ch3 = static_cast<uint16_t>(risingEdgeTimeNs);
+            table.Reg.Setup.Pwm.DeadTime.FallingEdge.Ch3 = static_cast<uint16_t>(fallingEdgeTimeNs);
+            break;
+
+        case Ch4:
+            table.Reg.Setup.Pwm.DeadTime.RisingEdge.Ch4 = static_cast<uint16_t>(risingEdgeTimeNs);
+            table.Reg.Setup.Pwm.DeadTime.FallingEdge.Ch4 = static_cast<uint16_t>(fallingEdgeTimeNs);
+            break;
+
+        case Ch5:
+            table.Reg.Setup.Pwm.DeadTime.RisingEdge.Ch5 = static_cast<uint16_t>(risingEdgeTimeNs);
+            table.Reg.Setup.Pwm.DeadTime.FallingEdge.Ch5 = static_cast<uint16_t>(fallingEdgeTimeNs);
+            break;
+
+        case Ch6:
+            table.Reg.Setup.Pwm.DeadTime.RisingEdge.Ch6 = static_cast<uint16_t>(risingEdgeTimeNs);
+            table.Reg.Setup.Pwm.DeadTime.FallingEdge.Ch6 = static_cast<uint16_t>(fallingEdgeTimeNs);
+            break;
+
+        case Ch7:
+            table.Reg.Setup.Pwm.DeadTime.RisingEdge.Ch7 = static_cast<uint16_t>(risingEdgeTimeNs);
+            table.Reg.Setup.Pwm.DeadTime.FallingEdge.Ch7 = static_cast<uint16_t>(fallingEdgeTimeNs);
+            break;
+
+        default:
+            break;
+    }
+
+    addToSyncList(MemoryTableDescription::Reg::Setup::Pwm::DeadTime::FallingEdge::address);
 }
 
 long int RemoteBoard::encoderRead(unsigned int encoderNumber) const
@@ -636,29 +868,6 @@ void RemoteBoard::addToSyncList(uint8_t address)
 
     // auxiliary variables
     std::vector<uint8_t>::iterator it;
-
-    // is the address any of the encoder counts or in Action sections?
-    const bool isEncoderCount = (address <= MemoryTable::Reg::Readings::Encoder7::address) && (address >= MemoryTable::Reg::Readings::Encoder0::address);
-    const bool isPwmDuty = (address <= MemoryTableDescription::Reg::Action::PwmDuty::Ch7::address) && (address >= MemoryTableDescription::Reg::Action::PwmDuty::Ch0::address);
-    const bool isDac = (address <= MemoryTableDescription::Reg::Action::Dac::Ch7::address) && (address >= MemoryTableDescription::Reg::Action::Dac::Ch0::address);
-    const bool isAdcRange = (address <= MemoryTableDescription::Reg::Setup::Adc::Range::Min::Ch7::address) && (address >= MemoryTableDescription::Reg::Setup::Adc::Range::Max::Ch0::address);
-
-    if (isEncoderCount)
-    {
-        address = MemoryTableDescription::Reg::Readings::Encoder0::address;
-    }
-    else if (isPwmDuty)
-    {
-        address = MemoryTableDescription::Reg::Action::PwmDuty::Ch0::address;
-    }
-    else if (isDac)
-    {
-        address = MemoryTableDescription::Reg::Action::Dac::Ch0::address;
-    }
-    else if (isAdcRange)
-    {
-        address = MemoryTableDescription::Reg::Setup::Adc::Range::Max::Ch0::address;
-    }
 
     // if the element is not in the list
     it = find(syncList.begin(), syncList.end(), address);

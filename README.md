@@ -18,35 +18,40 @@ Only immediate I/O operations are supported. However, you will be able to contro
 
 ## How to get started
 
-### The server computer
+If you are using only the client in Simulink, then binaries are ready for you. Just download them by clicking the "tags" button in the github repository. The Python bindings are not available due the big number of Python versions.
 
-In the server computer it is mandatory that the available drivers are installed and they must offer support to your board(s). You have basically two options:
+To do this, start by downloading and installing the following software:
+
+- [Microsoft Visual Studio Community Edition](https://visualstudio.microsoft.com/pt-br)
+- [CMake](https://cmake.org/download/)
+
+### The server application
+
+Unfortunaltely you will be required to build the server in your own computer. In the server computer it is mandatory that the available drivers are installed and they must offer support to your board(s). You have basically two options:
 
 - [HIL SDK](https://github.com/quanser/hil_sdk_win64 "HIL SDK") is a freeware driver, unfortunately only a few boards is supported
 - [QuaRC](https://www.quanser.com/products/quarc-real-time-control-software/ "QuaRC") is a premium software provided by Quanser, the license is not free but it supports real time operations, Simulink and network natively
 
 DO NOT change the default path during the drivers installation process. If you do, the compilation step will fail and you will be required to manually edit the CMakeLists file.
 
-### Both the server and client
+### The Simulink client
 
-Unfortunately you will be required to build your server and client locally. To do this, start by downloading and installing the following software:
+### The Python bindings
 
-- [Microsoft Visual Studio Community Edition]("https://visualstudio.microsoft.com/pt-br")
-- [CMake](https://cmake.org/download/)
+### Building
 
-Then,
+Follow the instructions to build:
 
 1. Download a copy of this repository by clicking on "Code" button and selecting "Download zip" option
 2. Extract the file and inside of the create folder (typically named "quanser-network-main"), create a new folder called "build"
 3. Open cmake-gui, click on "Browse Source..." button and select the "src" folder inside the extracted folder (step 1)
 4. Next, click on the "Browse Build..." button and select the "build" folder you just created (step 2)
 5. Next, click on the "Configure" button. This step may take a while because it will download and configure all software dependencies, so, it is required you are connected to internet
-6. If you are building the server application, then make sure you select the option BUILD_SERVER. If you are building a client application, make sure this option is disabled, because it depend on the Quanser drivers
-7. Then, click on the "Generate" button
-8. You may now close the CMake interface, navigate to the build folder using Windows Explorer and then open the file "quanserNetwork.sln" with Visual Studio
-9. If you are building the server application or Simulink/Python bindings, then you certainly wants to switch the profile to Release, instead of Debug
-10. Now, hit CTRL+SHIFT+B or click on Build Solution and be patient
-11. The server application (server.exe) will be placed in build/Release folder. You should copy this file somewhere else
+6. Then, click on the "Generate" button
+7. You may now close the CMake interface, navigate to the build folder using Windows Explorer and then open the file "quanserNetwork.sln" with Visual Studio
+8. If you are building the server application or Simulink/Python bindings, then you certainly wants to switch the profile to Release, instead of Debug
+9. Now, hit CTRL+SHIFT+B or click on Build Solution and be patient
+10. The server application (server.exe) will be placed in build/Release folder. You should copy this file somewhere else
 
 
 ### Starting the server

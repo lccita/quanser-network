@@ -3,6 +3,11 @@ cmake_minimum_required(VERSION 3.24)
 project(quanserNetwork C CXX)
 include(FetchContent)
 
+###################
+# Mablab location #
+###################
+set(Matlab_ROOT_DIR /usr/local/MATLAB/R2023a)
+
 ####################
 # Quanser location #
 ####################
@@ -78,6 +83,27 @@ if (${BUILD_SERVER} MATCHES ON)
     target_include_directories(server PRIVATE "." ${ASIO_INCLUDE_PATH} ${QUANSER_INCLUDE_PATH})
 endif ()
 
+##############################
+# Build the matlab sfunction #
+##############################
+if (EXISTS ${Matlab_ROOT_DIR})
+    find_package(Matlab)
+    if (BUILD_SFUNCTION MATCHES ON)
+        matlab_add_mex(NAME sfunction SRC
+            client/remote_board_sfunction.cpp
+            client/remote_board.cpp
+            client/remote_board.hpp
+            ${SRC_UTILS}
+        )
+        target_include_directories(sfunction PRIVATE
+            "."
+            ${ASIO_INCLUDE_PATH}
+            "${Matlab_ROOT_DIR}/simulink/include"
+        )
+        target_compile_definitions(sfunction PRIVATE -D_CRT_SECURE_NO_WARNINGS)
+    endif ()
+endif ()
+
 #####################################
 # Build the analog_loopback example #
 #####################################
@@ -88,6 +114,9 @@ add_executable(exampleAnalogLoopback
     ${SRC_UTILS}
 )
 target_include_directories(exampleAnalogLoopback PRIVATE "." ${ASIO_INCLUDE_PATH})
+if (UNIX)
+    target_link_libraries(exampleAnalogLoopback pthread)
+endif ()
 
 #####################################
 # Build the autoread example #
@@ -99,6 +128,9 @@ add_executable(exampleAutoRead
     ${SRC_UTILS}
 )
 target_include_directories(exampleAutoRead PRIVATE "." ${ASIO_INCLUDE_PATH})
+if (UNIX)
+    target_link_libraries(exampleAutoRead pthread)
+endif ()
 
 ###############################################
 # Build the memory table verifier application #
@@ -115,6 +147,7 @@ target_include_directories(scriptTestMemoryTable PRIVATE ".")
 ###############
 # C++ options #
 ###############
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 # Warnings and optimization
 if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")

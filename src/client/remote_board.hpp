@@ -59,6 +59,10 @@ public:
 
     void analogWrite(channel_t channel, double value);
 
+    void configAdc(channel_t channel, adcMode_t mode, double minRange, double maxRange);
+
+    void configDac(channel_t channel, double minRange, double maxRange);
+
     /**
      * This method sets the duty cycle of some PWM channel.
      * @param channel the PWM channel. Example: CH3.
@@ -81,6 +85,10 @@ public:
      * @return a real number representing the PWM frequency (in Hz).
      */
     double pwmGetFrequency(channel_t channel) const;
+
+    void configPwm(channel_t channel, pwmAlign_t align, pwmConfig_t config, pwmMode_t mode, pwmPolarity_t polarity);
+
+    void setPwmDeadTime(channel_t channel, double risingEdgeTimeNs, double fallingEdgeTimeNs);
 
     /**
      * This method reads the encoder pulse count value.
