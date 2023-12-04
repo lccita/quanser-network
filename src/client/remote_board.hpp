@@ -111,34 +111,7 @@ public:
      */
     void encoderSetQuadrature(unsigned int encoderNumber, encoderQuadrature_t quadrature);
 
-    /**
-     * It enables the auto read feature. It will make the daq send all measurements periodically.
-     *
-     * @param periodSecs is the period (in seconds) between the updates.
-     * @param function is a function defined by the user that will be called when new data is read from the
-     *        microcontroller. This function signature must be void function(void).
-     *
-     * @note The period has resolution of 1 millisecond.
-     */
-    void enableAutoRead(double periodSecs);
-
-    /**
-     * It enables the auto read feature. It will make the daq send all measurements periodically.
-     *
-     * @param periodSecs is the period (in seconds) between the updates.
-     * @param function is a function defined by the user that will be called when new data is read from the
-     *        microcontroller. This function signature must be void function(void).
-     *
-     * @note The period has resolution of 1 millisecond.
-     */
-    void enableAutoRead(double periodSecs, Callback function);
-
-    /**
-     * It disables the auto read feature.
-     */
-    void disableAutoRead();
-
-    bool isAutoReadEnabled() const;
+    uint32_t readTimeUs();
 
     /**
      * This method closes the communication with the remote board.

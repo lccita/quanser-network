@@ -1,4 +1,5 @@
 #include "protocol.h"
+#include <string.h>
 #define AS_U8(x) ((uint8_t)x)
 
 static uint8_t commMsgGetChecksumPosition(commMsg* self)
@@ -62,6 +63,14 @@ void commMsgAppendParameter(commMsg* self, uint8_t value)
         self->buffer[AS_U8(commMsgFieldData) + numberOfParameters] = value;
         commMsgSetField(self, commMsgFieldLength, initialLength + 1);
     }
+}
+
+void commMsgAppendParameters(commMsg *self, void* data, uint8_t len)
+{
+    const uint8_t initialLength = commMsgGetField(self, commMsgFieldLength);
+    const uint8_t numberOfParameters = commMsgGetNumberOfParameters(self);
+    memcpy(&self->buffer[AS_U8(commMsgFieldData) + numberOfParameters], data, len);
+    commMsgSetField(self, commMsgFieldLength, initialLength + len);
 }
 
 void commMsgInsertParameter(commMsg* self, uint8_t index, uint8_t value)

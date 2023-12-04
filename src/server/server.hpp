@@ -89,10 +89,6 @@ private:
 
     void boardRead();
 
-    void enableAutoRead();
-
-    void disableAutoRead();
-
     void processWriteInstruction(uint16_t addr, int16_t size, const uint8_t* values);
 
     void handleWriteInstruction();
@@ -101,8 +97,6 @@ private:
 
     void handleReadInstruction();
 
-    void makeAutoReadMsg();
-
     bool processPacket();
 
     void callbackFinishedAccepting(const std::error_code& ec);
@@ -110,8 +104,6 @@ private:
     void callbackFinishedReceiving(const std::error_code& ec, size_t bytesTransferred);
 
     void callbackFinishedSending(const std::error_code& ec, size_t bytesTransferred);
-
-    void callbackAutoRead(const std::error_code& ec);
 
     void communicationStart();
 

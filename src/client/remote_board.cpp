@@ -91,11 +91,7 @@ void RemoteBoard::sync()
                 break;
 
             case MemoryTableDescription::Reg::Action::PwmDuty::Ch0::address:
-                size = 32;
-                break;
-
-            case MemoryTableDescription::Reg::Action::Dac::Ch0::address:
-                size = 32;
+                size = 68;
                 break;
 
             case MemoryTableDescription::Reg::Setup::Adc::Range::Max::Ch0::address:
@@ -125,11 +121,7 @@ void RemoteBoard::sync()
 
             commMsgAppendParameter(&instructionPacket, address);
             commMsgAppendParameter(&instructionPacket, size);
-
-            for (j = 0; j < size; j++)
-            {
-                commMsgAppendParameter(&instructionPacket, table.memory[address + j]);
-            }
+            commMsgAppendParameters(&instructionPacket, &table.memory[address], size);
         }
 
         syncList.clear();
@@ -208,7 +200,7 @@ void RemoteBoard::digitalWrite(channel_t channel, int state)
             break;
     }
 
-    addToSyncList(MemoryTableDescription::Reg::Action::GpioOutput::address);
+    addToSyncList(MemoryTableDescription::Reg::Action::PwmDuty::Ch0::address);
 }
 
 int RemoteBoard::getGpioOutputState(channel_t channel) const
@@ -335,7 +327,7 @@ void RemoteBoard::analogWrite(channel_t channel, double value)
             break;
     }
 
-    addToSyncList(MemoryTableDescription::Reg::Action::Dac::Ch0::address);
+    addToSyncList(MemoryTableDescription::Reg::Action::PwmDuty::Ch0::address);
 }
 
 void RemoteBoard::configAdc(channel_t channel, adcMode_t mode, double minRange, double maxRange)
@@ -809,42 +801,13 @@ void RemoteBoard::encoderSetQuadrature(unsigned int encoderNumber, encoderQuadra
     addToSyncList(MemoryTableDescription::Reg::Setup::Encoder::Quadrature::address);
 }
 
-void RemoteBoard::enableAutoRead(double periodSecs)
+uint32_t RemoteBoard::readTimeUs()
 {
-    periodSecs = std::max(std::abs(periodSecs), 0.001);
-    table.Reg.Setup.AutoRead.Period.value.asBit32 = static_cast<uint32_t>(1000000 * periodSecs);
-    addToSyncList(MemoryTableDescription::Reg::Setup::AutoRead::Period::address);
-}
-
-void RemoteBoard::enableAutoRead(double periodSecs, Callback function)
-{
-    // set the user callback
-    callbackUserFinishedReceivingData = std::move(function);
-
-    // and enable the autoread
-    enableAutoRead(periodSecs);
-}
-
-void RemoteBoard::disableAutoRead()
-{
-    table.Reg.Setup.AutoRead.Length.value = 0;
-    addToSyncList(MemoryTableDescription::Reg::Setup::AutoRead::Length::address);
-}
-
-bool RemoteBoard::isAutoReadEnabled() const
-{
-    return table.Reg.Setup.AutoRead.Length.value > 0;
+    return table.Reg.Setup.readTimeUs;
 }
 
 void RemoteBoard::close()
 {
-    if (isAutoReadEnabled())
-    {
-        // then the auto-read was enabled some time, just to make sure, let's disable it
-        disableAutoRead();
-        sync();
-    }
-
     if (isConnected())
     {
         running = false;
@@ -957,15 +920,15 @@ void RemoteBoard::writeDataToBoard(uint8_t firstRegister, uint8_t *data, uint8_t
 void RemoteBoard::decodeReadAnswer()
 {
     /*
-     *                                    +-----------------------------------------------+
-     *                                    |                    Parameters                 |
-     * +------+------+-----------+--------+-------+------------------+------+------+------+----------+
-     * | 0xFF | 0xFF |    0x19   |  0x04  | 0x00  |       0x00       | 0x02 | 0x01 | 0x02 |   0xDE   |
-     * +------+------+-----------+--------+-------+------------------+------+------+------+----------+
-     * | SYNC | P.V. |  ANS_READ | Length | Error | Starting address | QTD  |    DATA     | Checksum |
-     * +------+------+-----------+--------+--------------------------+------+------+------+----------+
-     * |  0   |  1   |     2     |   3    |   4   |      5           |  6   |  7   |  8   |    9     |
-     * +------+------+-----------+--------+--------------------------+------+------+------+----------+
+     *                                    +--------------------------------------------------------------+
+     *                                    |                    Parameters                                |
+     * +------+------+-----------+--------+-------+------------------+------+------+---------------------+
+     * | 0xFF | 0xFF |    0x19   |  0x04  | 0x00  |       0x00       | 0x02 | 0x01 | 0x02 | 0xXXYYXXYY   |
+     * +------+------+-----------+--------+-------+------------------+------+------+------+--------------+----------+
+     * | SYNC | P.V. |  ANS_READ | Length | Error | Starting address | QTD  |    DATA     |    TIME      | Checksum |
+     * +------+------+-----------+--------+--------------------------+------+------+------+--------------+----------+
+     * |  0   |  1   |     2     |   3    |   4   |      5           |  6   |  7   |  8   |  9,10,11,12  |   13     |
+     * +------+------+-----------+--------+--------------------------+------+------+------+--------------+----------+
      *
      */
 
@@ -973,6 +936,7 @@ void RemoteBoard::decodeReadAnswer()
     const uint16_t size = commMsgGetParameter(&statusPacket, 2);
     uint8_t* parameters = commMsgGetAddrOfParameters(&statusPacket);
     memcpy(&table.memory[first_register], &parameters[3], size);
+    memcpy(&table.Reg.Setup.readTimeUs, &parameters[3+size], 4);
 }
 
 void RemoteBoard::decodeStatusPacket()

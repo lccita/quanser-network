@@ -863,46 +863,9 @@ union MemoryTableDescription {
                 } Range;
             } Dac;
 
-            struct AutoRead {
-                struct Period {
-                    union value {
-                        uint32_t asBit32;
-                        uint8_t asBit8[4];
-                    } value;
-                    constexpr static uint8_t address = 244;
-                    constexpr static uint8_t defaultValue = 0;
-                } Period;
+            uint32_t readTimeUs;  // address = 244, 245, 246, 247
 
-                struct FirstReg {
-                    uint8_t value;
-                    constexpr static uint8_t address = 248;
-                    constexpr static uint8_t defaultValue = 0;
-                } FirstReg;
-
-                struct Length {
-                    uint8_t value;
-                    constexpr static uint8_t address = 249;
-                    constexpr static uint8_t defaultValue = 0;
-                } Length;
-
-                uint8_t reserved[2]; // 250, 251
-            } AutoRead;
-
-            /*
-            struct Log {
-                struct Period {
-                    union value {
-                        uint8_t asBit8[2];
-                        uint16_t asBit16;
-                        int16_t asInteger;
-                    } value;
-                    constexpr static uint8_t address = 220;
-                    constexpr static uint8_t defaultValue = 0;
-                } Period;
-            } Log;
-            */
-
-            uint8_t reserved2[2]; // 252, 253
+            uint8_t reserved[6]; // 248, 249, 250, 251, 252, 253
 
             struct BoardModel {
                 uint8_t value;

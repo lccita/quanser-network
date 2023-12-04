@@ -710,21 +710,6 @@ void Server::boardRead()
 
 }
 
-void Server::enableAutoRead()
-{
-    const uint32_t periodUs = table.Reg.Setup.AutoRead.Period.value.asBit32;
-    if (periodUs > 0)
-    {
-        autoReadTimer->expires_from_now(asio::chrono::microseconds(periodUs));
-        autoReadTimer->async_wait(std::bind(&Server::callbackAutoRead, this, std::placeholders::_1));
-    }
-}
-
-void Server::disableAutoRead()
-{
-    autoReadTimer->cancel();
-}
-
 void Server::processWriteInstruction(uint16_t addr, int16_t size, const uint8_t* values)
 {
     const uint16_t firstAddress = addr;
@@ -733,7 +718,11 @@ void Server::processWriteInstruction(uint16_t addr, int16_t size, const uint8_t*
     t_double doubleValues[8];
     t_uint32 channels[8] = {0, 1, 2, 3, 4, 5, 6, 7};
     const uint8_t boardModel = table.Reg.Setup.BoardModel.value;
+    const uint8_t numberOfAdcs = boardInfo[boardModel][featureAdcChannels];
     const uint8_t numberOfDacs = boardInfo[boardModel][featureDacChannels];
+    const uint8_t numberOfEncoders = boardInfo[boardModel][featureEncoderChannels];
+    const uint8_t numberOfPwms = boardInfo[boardModel][featurePwmChannels];
+    const uint8_t numberOfGpioInputs = 8;
     const uint8_t numberOfGpioOutputs = 8;
 
     /*
@@ -744,126 +733,179 @@ void Server::processWriteInstruction(uint16_t addr, int16_t size, const uint8_t*
 
     while (length > 0)
     {
-        switch(addr) {
-            case MemoryTableDescription::Reg::Readings::Encoder0::address:
-                sizeInBytes = 8 * sizeof(MemoryTableDescription::Reg::Readings::Encoder0::value);
-                memcpy((void*) table.Reg.Readings.Encoder0.value.asBit8, &values[addr - firstAddress], sizeInBytes);
-                boardSetEncoderCount();
-                length = length - sizeInBytes;
-                addr = addr + sizeInBytes;
-                break;
+        if (addr == MemoryTableDescription::Reg::Readings::Encoder0::address)
+        {
+            sizeInBytes = 8 * sizeof(MemoryTableDescription::Reg::Readings::Encoder0::value);
+            memcpy((void *) table.Reg.Readings.Encoder0.value.asBit8, &values[addr - firstAddress], sizeInBytes);
+            boardSetEncoderCount();
+            length = length - sizeInBytes;
+            addr = addr + sizeInBytes;
+        }
+        else if (addr == MemoryTableDescription::Reg::Action::PwmDuty::Ch0::address)
+        {
+            t_int32 encoderCounts[8];
+            t_boolean gpioInputValues[8];
+            t_double adcValues[8], otherInputValues[8], otherOutputValues[8];
 
-            case MemoryTableDescription::Reg::Action::PwmDuty::Ch0::address:
-                sizeInBytes = 8 * sizeof(MemoryTableDescription::Reg::Action::PwmDuty::Ch0::value);
-                memcpy((void*) table.Reg.Action.PwmDuty.Ch0.value.asBit8, &values[addr - firstAddress], sizeInBytes);
-                boardSetPwmDuty();
-                length = length - sizeInBytes;
-                addr = addr + sizeInBytes;
-                break;
+            sizeInBytes = 8 * sizeof(MemoryTableDescription::Reg::Action::PwmDuty::Ch0::value) +
+                          8 * sizeof(MemoryTableDescription::Reg::Action::Dac::Ch0::value) +
+                          sizeof(MemoryTableDescription::Reg::Action::GpioOutput::value);
+            memcpy((void *) table.Reg.Action.PwmDuty.Ch0.value.asBit8, &values[addr - firstAddress], sizeInBytes);
 
-            case MemoryTableDescription::Reg::Action::Dac::Ch0::address:
-                sizeInBytes = 8 * sizeof(MemoryTableDescription::Reg::Action::Dac::Ch0::value);
-                memcpy((void*) table.Reg.Action.Dac.Ch0.value.asBit8, &values[addr - firstAddress], sizeInBytes);
-                doubleValues[0] = static_cast<double>(table.Reg.Action.Dac.Ch0.value.asFloat);
-                doubleValues[1] = static_cast<double>(table.Reg.Action.Dac.Ch1.value.asFloat);
-                doubleValues[2] = static_cast<double>(table.Reg.Action.Dac.Ch2.value.asFloat);
-                doubleValues[3] = static_cast<double>(table.Reg.Action.Dac.Ch3.value.asFloat);
-                doubleValues[4] = static_cast<double>(table.Reg.Action.Dac.Ch4.value.asFloat);
-                doubleValues[5] = static_cast<double>(table.Reg.Action.Dac.Ch5.value.asFloat);
-                doubleValues[6] = static_cast<double>(table.Reg.Action.Dac.Ch6.value.asFloat);
-                doubleValues[7] = static_cast<double>(table.Reg.Action.Dac.Ch7.value.asFloat);
-                hil_write_analog(card, channels, numberOfDacs, doubleValues);
-                length = length - sizeInBytes;
-                addr = addr + sizeInBytes;
-                break;
+            const t_double pwmDuty[] = {
+                static_cast<t_double>(table.Reg.Action.PwmDuty.Ch0.value.asFloat),
+                static_cast<t_double>(table.Reg.Action.PwmDuty.Ch1.value.asFloat),
+                static_cast<t_double>(table.Reg.Action.PwmDuty.Ch2.value.asFloat),
+                static_cast<t_double>(table.Reg.Action.PwmDuty.Ch3.value.asFloat),
+                static_cast<t_double>(table.Reg.Action.PwmDuty.Ch4.value.asFloat),
+                static_cast<t_double>(table.Reg.Action.PwmDuty.Ch5.value.asFloat),
+                static_cast<t_double>(table.Reg.Action.PwmDuty.Ch6.value.asFloat),
+                static_cast<t_double>(table.Reg.Action.PwmDuty.Ch7.value.asFloat)
+            };
 
-            case MemoryTableDescription::Reg::Action::GpioOutput::address:
-                sizeInBytes = sizeof(MemoryTableDescription::Reg::Action::GpioOutput::value);
-                memcpy(&table.Reg.Action.GpioOutput.value.all, &values[addr - firstAddress], sizeInBytes);
-                booleanValues[0] = static_cast<t_boolean>(table.Reg.Action.GpioOutput.value.bit.Ch0 > 0);
-                booleanValues[1] = static_cast<t_boolean>(table.Reg.Action.GpioOutput.value.bit.Ch1 > 0);
-                booleanValues[2] = static_cast<t_boolean>(table.Reg.Action.GpioOutput.value.bit.Ch2 > 0);
-                booleanValues[3] = static_cast<t_boolean>(table.Reg.Action.GpioOutput.value.bit.Ch3 > 0);
-                booleanValues[4] = static_cast<t_boolean>(table.Reg.Action.GpioOutput.value.bit.Ch4 > 0);
-                booleanValues[5] = static_cast<t_boolean>(table.Reg.Action.GpioOutput.value.bit.Ch5 > 0);
-                booleanValues[6] = static_cast<t_boolean>(table.Reg.Action.GpioOutput.value.bit.Ch6 > 0);
-                booleanValues[7] = static_cast<t_boolean>(table.Reg.Action.GpioOutput.value.bit.Ch7 > 0);
-                hil_write_digital(card, channels, numberOfGpioOutputs, booleanValues);
-                length = length - sizeInBytes;
-                addr = addr + sizeInBytes;
-                break;
+            const t_double dacVoltages[] = {
+                static_cast<double>(table.Reg.Action.Dac.Ch0.value.asFloat),
+                static_cast<double>(table.Reg.Action.Dac.Ch1.value.asFloat),
+                static_cast<double>(table.Reg.Action.Dac.Ch2.value.asFloat),
+                static_cast<double>(table.Reg.Action.Dac.Ch3.value.asFloat),
+                static_cast<double>(table.Reg.Action.Dac.Ch4.value.asFloat),
+                static_cast<double>(table.Reg.Action.Dac.Ch5.value.asFloat),
+                static_cast<double>(table.Reg.Action.Dac.Ch6.value.asFloat),
+                static_cast<double>(table.Reg.Action.Dac.Ch7.value.asFloat)
+            };
 
-            case MemoryTableDescription::Reg::Setup::Adc::Range::Max::Ch0::address:
-                // 16 because it includes all the maxs and mins of the 8 channels
-                sizeInBytes = 16 * sizeof(MemoryTableDescription::Reg::Setup::Adc::Range::Max::Ch0::value);
-                memcpy(&table.Reg.Setup.Adc.Range.Max.Ch0.value.asBit8, &values[addr - firstAddress], sizeInBytes);
-                boardSetAdcRanges();
-                length = length - sizeInBytes;
-                addr = addr + sizeInBytes;
-                break;
+            const t_boolean gpioOutputValues[] = {
+                static_cast<t_boolean>(table.Reg.Action.GpioOutput.value.bit.Ch0 > 0),
+                static_cast<t_boolean>(table.Reg.Action.GpioOutput.value.bit.Ch1 > 0),
+                static_cast<t_boolean>(table.Reg.Action.GpioOutput.value.bit.Ch2 > 0),
+                static_cast<t_boolean>(table.Reg.Action.GpioOutput.value.bit.Ch3 > 0),
+                static_cast<t_boolean>(table.Reg.Action.GpioOutput.value.bit.Ch4 > 0),
+                static_cast<t_boolean>(table.Reg.Action.GpioOutput.value.bit.Ch5 > 0),
+                static_cast<t_boolean>(table.Reg.Action.GpioOutput.value.bit.Ch6 > 0),
+                static_cast<t_boolean>(table.Reg.Action.GpioOutput.value.bit.Ch7 > 0)
+            };
 
-            case MemoryTableDescription::Reg::Setup::Adc::Mode::address:
-                sizeInBytes = sizeof(MemoryTableDescription::Reg::Setup::Adc::Mode::value);
-                memcpy(&table.Reg.Setup.Adc.Mode.value.all, &values[addr - firstAddress], sizeInBytes);
-                boardSetAdcModes();
-                length = length - sizeInBytes;
-                addr = addr + sizeInBytes;
-                break;
+            hil_read_write(
+                    card,
+                    channels, numberOfAdcs,
+                    channels, numberOfEncoders,
+                    channels, numberOfGpioInputs,
+                    channels, 0,
+                    channels, numberOfDacs,
+                    channels, numberOfPwms,
+                    channels, numberOfGpioOutputs,
+                    channels, 0,
+                    adcValues,
+                    encoderCounts,
+                    gpioInputValues,
+                    otherInputValues,
+                    dacVoltages,
+                    pwmDuty,
+                    gpioOutputValues,
+                    otherOutputValues
+            );
 
-            case MemoryTableDescription::Reg::Setup::Encoder::Quadrature::address:
-                sizeInBytes = sizeof(MemoryTableDescription::Reg::Setup::Encoder::Quadrature::value::all);
-                memcpy(&table.Reg.Setup.Encoder.Quadrature.value.all, &values[addr - firstAddress], sizeInBytes);
-                boardSetEncoderQuadrature();
-                length = length - sizeInBytes;
-                addr = addr + sizeInBytes;
-                break;
+            // Now copy data into the memory table
+            table.Reg.Readings.Adc.Ch0.value.asFloat = static_cast<float>(adcValues[0]);
+            table.Reg.Readings.Adc.Ch1.value.asFloat = static_cast<float>(adcValues[1]);
+            if (numberOfAdcs > 2)
+            {
+                table.Reg.Readings.Adc.Ch2.value.asFloat = static_cast<float>(adcValues[2]);
+                table.Reg.Readings.Adc.Ch3.value.asFloat = static_cast<float>(adcValues[3]);
+                table.Reg.Readings.Adc.Ch4.value.asFloat = static_cast<float>(adcValues[4]);
+                table.Reg.Readings.Adc.Ch5.value.asFloat = static_cast<float>(adcValues[5]);
+                table.Reg.Readings.Adc.Ch6.value.asFloat = static_cast<float>(adcValues[6]);
+                table.Reg.Readings.Adc.Ch7.value.asFloat = static_cast<float>(adcValues[7]);
+            }
 
-            case MemoryTableDescription::Reg::Setup::Dac::Range::Max::Ch0::address:
-                // 16 because it includes all the maxs and mins of the 8 channels
-                sizeInBytes = 16 * sizeof(MemoryTableDescription::Reg::Setup::Dac::Range::Max::Ch0::value);
-                memcpy(&table.Reg.Setup.Dac.Range.Max.Ch0.value.asBit8, &values[addr - firstAddress], sizeInBytes);
-                boardSetDacRanges();
-                length = length - sizeInBytes;
-                addr = addr + sizeInBytes;
-                break;
+            table.Reg.Readings.Encoder0.value.asInteger = static_cast<int32_t>(encoderCounts[0]);
+            table.Reg.Readings.Encoder1.value.asInteger = static_cast<int32_t>(encoderCounts[1]);
+            if (numberOfEncoders > 2)
+            {
+                table.Reg.Readings.Encoder2.value.asInteger = static_cast<int32_t>(encoderCounts[2]);
+                table.Reg.Readings.Encoder3.value.asInteger = static_cast<int32_t>(encoderCounts[3]);
+                table.Reg.Readings.Encoder4.value.asInteger = static_cast<int32_t>(encoderCounts[4]);
+                table.Reg.Readings.Encoder5.value.asInteger = static_cast<int32_t>(encoderCounts[5]);
+                table.Reg.Readings.Encoder6.value.asInteger = static_cast<int32_t>(encoderCounts[6]);
+                table.Reg.Readings.Encoder7.value.asInteger = static_cast<int32_t>(encoderCounts[7]);
+            }
 
-            case MemoryTableDescription::Reg::Setup::Pwm::Frequency::Ch0::address:
-                sizeInBytes = 8 * sizeof(MemoryTableDescription::Reg::Setup::Pwm::Frequency::Ch0::value::asFloat);
-                memcpy(&table.Reg.Setup.Pwm.Frequency.Ch0.value.asBit8, &values[addr - firstAddress], sizeInBytes);
-                boardSetPwmFrequency();
-                length = length - sizeInBytes;
-                addr = addr + sizeInBytes;
-                break;
+            table.Reg.Readings.GpioInput.value.bit.Ch0 = static_cast<uint8_t>(gpioInputValues[0]);
+            table.Reg.Readings.GpioInput.value.bit.Ch1 = static_cast<uint8_t>(gpioInputValues[1]);
+            if (numberOfGpioInputs > 2)
+            {
+                table.Reg.Readings.GpioInput.value.bit.Ch2 = static_cast<uint8_t>(gpioInputValues[2]);
+                table.Reg.Readings.GpioInput.value.bit.Ch3 = static_cast<uint8_t>(gpioInputValues[3]);
+                table.Reg.Readings.GpioInput.value.bit.Ch4 = static_cast<uint8_t>(gpioInputValues[4]);
+                table.Reg.Readings.GpioInput.value.bit.Ch5 = static_cast<uint8_t>(gpioInputValues[5]);
+                table.Reg.Readings.GpioInput.value.bit.Ch6 = static_cast<uint8_t>(gpioInputValues[6]);
+                table.Reg.Readings.GpioInput.value.bit.Ch7 = static_cast<uint8_t>(gpioInputValues[7]);
+            }
 
-            case MemoryTableDescription::Reg::Setup::Pwm::Config::Ch0::address:
-                sizeInBytes = 8 * sizeof(MemoryTableDescription::Reg::Setup::Pwm::Config::Ch0::all);
-                memcpy(&table.Reg.Setup.Pwm.Config.Ch0.all, &values[addr - firstAddress], sizeInBytes);
-                boardSetPwmConfig();
-                length = length - sizeInBytes;
-                addr = addr + sizeInBytes;
-                break;
-
-            case MemoryTableDescription::Reg::Setup::Pwm::DeadTime::FallingEdge::address:
-                // there are 16 vales there to be updated (8x falling and 8x rising)
-                sizeInBytes = 16 * sizeof(MemoryTableDescription::Reg::Setup::Pwm::DeadTime::FallingEdge::Ch0);
-                memcpy(&table.Reg.Setup.Pwm.DeadTime.FallingEdge.Ch0, &values[addr - firstAddress], sizeInBytes);
-                boardSetPwmDeadTime();
-                length = length - sizeInBytes;
-                addr = addr + sizeInBytes;
-                break;
-
-            case MemoryTableDescription::Reg::Setup::AutoRead::Period::address:
-                sizeInBytes = sizeof(MemoryTableDescription::Reg::Setup::AutoRead::Period::value);
-                memcpy(table.Reg.Setup.AutoRead.Period.value.asBit8, &values[addr - firstAddress], sizeInBytes);
-                if (table.Reg.Setup.AutoRead.Period.value.asBit32 > 0)
-                    enableAutoRead();
-                else
-                    disableAutoRead();
-                length = length - sizeInBytes;
-                addr = addr + sizeInBytes;
-                break;
-
-            default:
+            length = length - sizeInBytes;
+            addr = addr + sizeInBytes;
+        }
+        else if (addr == MemoryTableDescription::Reg::Setup::Adc::Range::Max::Ch0::address)
+        {
+            // 16 because it includes all the maxs and mins of the 8 channels
+            sizeInBytes = 16 * sizeof(MemoryTableDescription::Reg::Setup::Adc::Range::Max::Ch0::value);
+            memcpy(&table.Reg.Setup.Adc.Range.Max.Ch0.value.asBit8, &values[addr - firstAddress], sizeInBytes);
+            boardSetAdcRanges();
+            length = length - sizeInBytes;
+            addr = addr + sizeInBytes;
+        }
+        else if (addr == MemoryTableDescription::Reg::Setup::Adc::Mode::address)
+        {
+            sizeInBytes = sizeof(MemoryTableDescription::Reg::Setup::Adc::Mode::value);
+            memcpy(&table.Reg.Setup.Adc.Mode.value.all, &values[addr - firstAddress], sizeInBytes);
+            boardSetAdcModes();
+            length = length - sizeInBytes;
+            addr = addr + sizeInBytes;
+        }
+        else if (addr == MemoryTableDescription::Reg::Setup::Encoder::Quadrature::address)
+        {
+            sizeInBytes = sizeof(MemoryTableDescription::Reg::Setup::Encoder::Quadrature::value::all);
+            memcpy(&table.Reg.Setup.Encoder.Quadrature.value.all, &values[addr - firstAddress], sizeInBytes);
+            boardSetEncoderQuadrature();
+            length = length - sizeInBytes;
+            addr = addr + sizeInBytes;
+        }
+        else if (addr == MemoryTableDescription::Reg::Setup::Dac::Range::Max::Ch0::address)
+        {
+            // 16 because it includes all the maxs and mins of the 8 channels
+            sizeInBytes = 16 * sizeof(MemoryTableDescription::Reg::Setup::Dac::Range::Max::Ch0::value);
+            memcpy(&table.Reg.Setup.Dac.Range.Max.Ch0.value.asBit8, &values[addr - firstAddress], sizeInBytes);
+            boardSetDacRanges();
+            length = length - sizeInBytes;
+            addr = addr + sizeInBytes;
+        }
+        else if (addr == MemoryTableDescription::Reg::Setup::Pwm::Frequency::Ch0::address)
+        {
+            sizeInBytes = 8 * sizeof(MemoryTableDescription::Reg::Setup::Pwm::Frequency::Ch0::value::asFloat);
+            memcpy(&table.Reg.Setup.Pwm.Frequency.Ch0.value.asBit8, &values[addr - firstAddress], sizeInBytes);
+            boardSetPwmFrequency();
+            length = length - sizeInBytes;
+            addr = addr + sizeInBytes;
+        }
+        else if (addr == MemoryTableDescription::Reg::Setup::Pwm::Config::Ch0::address)
+        {
+            sizeInBytes = 8 * sizeof(MemoryTableDescription::Reg::Setup::Pwm::Config::Ch0::all);
+            memcpy(&table.Reg.Setup.Pwm.Config.Ch0.all, &values[addr - firstAddress], sizeInBytes);
+            boardSetPwmConfig();
+            length = length - sizeInBytes;
+            addr = addr + sizeInBytes;
+        }
+        else if (addr == MemoryTableDescription::Reg::Setup::Pwm::DeadTime::FallingEdge::address)
+        {
+            // there are 16 vales there to be updated (8x falling and 8x rising)
+            sizeInBytes = 16 * sizeof(MemoryTableDescription::Reg::Setup::Pwm::DeadTime::FallingEdge::Ch0);
+            memcpy(&table.Reg.Setup.Pwm.DeadTime.FallingEdge.Ch0, &values[addr - firstAddress], sizeInBytes);
+            boardSetPwmDeadTime();
+            length = length - sizeInBytes;
+            addr = addr + sizeInBytes;
+        }
+        else
+        {
                 // If arrived here, then the loop will repeat and it is required
                 // to update the addr and length
                 length = length - 1;
@@ -885,7 +927,26 @@ void Server::handleWriteInstruction()
     int16_t length = commMsgGetNumberOfParameters(&instructionPacket);
     length = length - 1;
 
+    const uint32_t ti = getTimeUs();
     processWriteInstruction(addr, length, &parameters[1]);
+    const uint32_t tf = getTimeUs();
+    const uint32_t tInstant = (tf + ti) / 2;
+
+    // And now create a read answer with all measurements
+    const uint8_t firstReg = 0;
+    const uint8_t answerLength = 68;
+    commMsgCreateEmptyMsg(&statusPacket, commMsgTypeAnsRead);
+    commMsgAppendParameter(&statusPacket, 0);                // insert error
+    commMsgAppendParameter(&statusPacket, firstReg);         // insert the first register read
+    commMsgAppendParameter(&statusPacket, answerLength);     // insert how many registers were read
+    for (uint8_t i = 0; i < answerLength; i++)
+    {
+        commMsgAppendParameter(&statusPacket, table.memory[firstReg + i]);
+    }
+
+    // Add the server time
+    commMsgAppendParameters(&statusPacket, (void*) &tInstant, sizeof(tInstant));
+    commMsgUpdateChecksumValue(&statusPacket);
 }
 
 
@@ -916,7 +977,10 @@ void Server::handleReadInstruction()
     uint8_t length = commMsgGetParameter(&instructionPacket, 1);
 
     // update the measurements
+    const uint32_t ti = getTimeUs();
     boardRead();
+    const uint32_t tf = getTimeUs();
+    const uint32_t tInstant = (tf + ti) / 2;
 
     commMsgCreateEmptyMsg(&statusPacket, commMsgTypeAnsRead);
     commMsgAppendParameter(&statusPacket, 0);          // insert error
@@ -934,29 +998,10 @@ void Server::handleReadInstruction()
         commMsgAppendParameter(&statusPacket, table.memory[first_reg + i]);
     }
 
+    // Add the server time
+    commMsgAppendParameters(&statusPacket, (void*) &tInstant, sizeof(tInstant));
+
     commMsgUpdateChecksumValue(&statusPacket);
-}
-
-void Server::makeAutoReadMsg()
-{
-    uint8_t i;
-    const uint8_t first_reg = 0;
-    const uint8_t length = 68;
-
-    // update the measurements
-    boardRead();
-
-    commMsgCreateEmptyMsg(&autoReadStatusPacket, commMsgTypeAnsRead);
-    commMsgAppendParameter(&autoReadStatusPacket, 0);          // insert error
-    commMsgAppendParameter(&autoReadStatusPacket, first_reg);  // insert the first register read
-    commMsgAppendParameter(&autoReadStatusPacket, length);     // insert how many registers were read
-
-    for (i = 0; i < length; i++)
-    {
-        commMsgAppendParameter(&autoReadStatusPacket, table.memory[first_reg + i]);
-    }
-
-    commMsgUpdateChecksumValue(&autoReadStatusPacket);
 }
 
 bool Server::processPacket()
@@ -964,7 +1009,6 @@ bool Server::processPacket()
     bool generatedStatusPacket = false;
 
     switch (commMsgGetField(&instructionPacket, commMsgFieldType)) {
-
         case static_cast<uint8_t>(commMsgTypeRead):
             handleReadInstruction();
             generatedStatusPacket = true;
@@ -972,6 +1016,7 @@ bool Server::processPacket()
 
         case static_cast<uint8_t>(commMsgTypeWrite):
             handleWriteInstruction();
+            generatedStatusPacket = true;
             break;
 
         case static_cast<uint8_t>(commMsgTypeMultiWrite):
@@ -1028,6 +1073,7 @@ void Server::callbackFinishedReceiving(const std::error_code& ec, size_t bytesTr
                 {
                     waitingRx = false;   // release the user thread
                 }
+
                 commReceiverClean(&receiver);
             }
         }
@@ -1054,35 +1100,6 @@ void Server::callbackFinishedAccepting(const std::error_code& ec)
     hasClientConnected = true;
     communicationAsyncReceive();
     std::cout << "(INFO) A client has connected" << std::endl;
-}
-
-void Server::callbackAutoRead(const std::error_code& ec)
-{
-    const uint32_t periodUs = table.Reg.Setup.AutoRead.Period.value.asBit32;
-    uint8_t *buffer;
-    uint16_t size;
-
-    if (ec == asio::error::operation_aborted)
-    {
-        // the waiting was cancelled
-    }
-    else
-    {
-        if (periodUs > 0)
-        {
-            // schedule the next reading time
-            autoReadTimer->expires_from_now(asio::chrono::microseconds(periodUs));
-
-            // build the autoread message and it
-            makeAutoReadMsg();
-            buffer = autoReadStatusPacket.buffer;
-            size = commMsgGetTotalPacketSize(&autoReadStatusPacket);
-            communicationAsyncSend(buffer, size);
-
-            // now we put the timer to run again
-            autoReadTimer->async_wait(std::bind(&Server::callbackAutoRead, this, std::placeholders::_1));
-        }
-    }
 }
 
 void Server::communicationStart()

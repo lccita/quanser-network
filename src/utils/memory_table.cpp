@@ -247,12 +247,12 @@ uint8_t registerSize(uint8_t address)
         sizeof(MemoryTableDescription::Reg::Setup::Dac::Range::Min::Ch5::value),      // 241
         sizeof(MemoryTableDescription::Reg::Setup::Dac::Range::Min::Ch6::value),      // 242
         sizeof(MemoryTableDescription::Reg::Setup::Dac::Range::Min::Ch7::value),      // 243
-        sizeof(MemoryTableDescription::Reg::Setup::AutoRead::Period::value),          // 244
-        sizeof(MemoryTableDescription::Reg::Setup::AutoRead::Period::value),          // 245
-        sizeof(MemoryTableDescription::Reg::Setup::AutoRead::Period::value),          // 246
-        sizeof(MemoryTableDescription::Reg::Setup::AutoRead::Period::value),          // 247
-        sizeof(MemoryTableDescription::Reg::Setup::AutoRead::FirstReg::value),        // 248
-        sizeof(MemoryTableDescription::Reg::Setup::AutoRead::Length::value),          // 249
+        4,                                                                            // 244
+        4,                                                                            // 245
+        4,                                                                            // 246
+        4,                                                                            // 247
+        0,                                                                            // 248
+        0,                                                                            // 249
         0,                                                                            // 250
         0,                                                                            // 251
         0,                                                                            // 252
